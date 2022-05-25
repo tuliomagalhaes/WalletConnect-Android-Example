@@ -96,7 +96,7 @@ class WalletConnectHandler(
     ) {
         currentSession?.approveRequest(
             id = id,
-            response = message,
+            response = "0x$message",
         )
     }
 
@@ -121,19 +121,50 @@ class WalletConnectHandler(
                 walletConnectEventCallback?.invoke(event)
             }
             is Session.MethodCall.Custom -> {
-                if (call.method == "personal_sign" || call.method == "eth_sign") {
-                    val event = WalletConnectEvent.EthereumSignInRequest(
-                        id = call.id,
-                        message = call.params?.joinToString() ?: "",
-                    )
-                    walletConnectEventCallback?.invoke(event)
-                } else {
+                val messageIndex = getSignMessageIndex(call.method) ?: run {
                     walletConnectEventCallback?.invoke(WalletConnectEvent.UnhandledRequest)
+                    return
                 }
+                val event = WalletConnectEvent.EthereumSignInRequest(
+                    id = call.id,
+                    message = call.params?.getOrNull(messageIndex)?.toString()?.decodeHex() ?: "",
+                )
+                walletConnectEventCallback?.invoke(event)
             }
             is Session.MethodCall.SessionUpdate,
             is Session.MethodCall.SendTransaction,
             is Session.MethodCall.Response -> walletConnectEventCallback?.invoke(WalletConnectEvent.UnhandledRequest)
         }
+    }
+
+    private fun getSignMessageIndex(method: String): Int? {
+        return when (method) {
+            "personal_sign" -> {
+                0
+            }
+            "eth_sign" -> {
+                1
+            }
+            else -> {
+                null
+            }
+        }
+    }
+
+    private fun String.decodeHex(): String {
+        check(length % 2 == 0) { "Must have an even length" }
+
+        val value = if (startsWith("0x")) {
+            substring(2, this.length)
+        } else {
+            this
+        }
+
+        val strBytes = value
+            .chunked(2)
+            .map { it.toInt(16).toByte() }
+            .toByteArray()
+
+        return String(strBytes)
     }
 }

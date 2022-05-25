@@ -8,6 +8,7 @@ import com.tuliomagalhaes.walletconnectexample.ui.Event
 import com.tuliomagalhaes.walletconnectexample.ui.ViewState
 import org.kethereum.crypto.CryptoAPI
 import org.kethereum.crypto.toAddress
+import org.kethereum.crypto.toHex
 import org.kethereum.eip191.signWithEIP191PersonalSign
 import org.kethereum.model.ECKeyPair
 import org.kethereum.model.PrivateKey
@@ -59,7 +60,7 @@ class WalletConnectViewModel(
     private fun approveSignInRequest(event: Event.SignInClicked) {
         walletConnectHandler.approveRequest(
             id = event.id,
-            message = ecKeyPair.signWithEIP191PersonalSign(event.message.toByteArray()).toString(),
+            message = ecKeyPair.signWithEIP191PersonalSign(event.message.toByteArray()).toHex(),
         )
     }
 
