@@ -1,12 +1,15 @@
 package com.tuliomagalhaes.walletconnectexample.ui
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Text
 import androidx.compose.material.Surface
 import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.tuliomagalhaes.walletconnectexample.ui.components.TextField
@@ -22,47 +25,36 @@ fun WalletScreenContent(
         color = MaterialTheme.colors.background
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp)
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            AddressInfo(onEvent)
-            when (viewState) {
-                is ViewState.ConnectionRequest -> AcceptOrRejectConnection(viewState, onEvent)
-                is ViewState.EthereumSignIn -> EthereumSignIn(viewState, onEvent)
-                ViewState.InitialState -> {}
+            TextField(
+                value = viewState.walletPrivateKey,
+                label = "Wallet Private Key",
+                placeholder = "Input your wallet private key",
+            ) { newValue ->
+                onEvent(Event.PrivateKeyChanged(newValue))
+            }
+            Text(
+                text = "Wallet Address: %s".format(viewState.walletAddress),
+            )
+            when (viewState.actionContent) {
+                is ActionContent.ConnectionRequest -> AcceptOrRejectConnection(viewState.actionContent, onEvent)
+                is ActionContent.EthereumSignIn -> EthereumSignIn(viewState.actionContent, onEvent)
+                is ActionContent.Error -> ShowError(viewState.actionContent.message)
+                ActionContent.Empty -> {}
             }
         }
     }
 }
 
 @Composable
-private fun AddressInfo(
-    onEvent: (Event) -> Unit,
-) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        TextField(
-            value = "",
-            label = "Public Address",
-            placeholder = "Input your public address",
-        ) { newValue ->
-            onEvent(Event.PublicAddressChanged(newValue))
-        }
-        TextField(
-            value = "",
-            label = "Private Key",
-            placeholder = "Input your address private key",
-        ) { newValue ->
-            onEvent(Event.PrivateKeyChanged(newValue))
-        }
-    }
-}
-
-@Composable
 private fun EthereumSignIn(
-    viewState: ViewState.EthereumSignIn,
+    viewState: ActionContent.EthereumSignIn,
     onEvent: (Event) -> Unit,
 ) {
     Column(
@@ -92,7 +84,7 @@ private fun EthereumSignIn(
 
 @Composable
 private fun AcceptOrRejectConnection(
-    viewState: ViewState.ConnectionRequest,
+    viewState: ActionContent.ConnectionRequest,
     onEvent: (Event) -> Unit,
 ) {
     Column(
@@ -114,4 +106,12 @@ private fun AcceptOrRejectConnection(
             modifier = Modifier.fillMaxWidth(),
         )
     }
+}
+
+@Composable
+private fun ShowError(message: String) {
+    Text(
+        text = message,
+        color = Color.Red,
+    )
 }

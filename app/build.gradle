@@ -57,6 +57,14 @@ dependencies {
 
     implementation 'com.github.WalletConnect:kotlin-walletconnect-lib:0.9.6'
 
+    implementation 'com.github.komputing.kethereum:model:0.85.7'
+    implementation 'com.github.komputing.kethereum:crypto:0.85.7'
+    implementation 'com.github.komputing.kethereum:crypto_api:0.85.7'
+    implementation 'com.github.komputing.kethereum:eip191:0.85.7'
+    implementation ('com.github.komputing.kethereum:crypto_impl_bouncycastle:0.85.7') {
+        exclude group: "org.bouncycastle"
+    }
+
     implementation "org.java-websocket:Java-WebSocket:1.4.0"
 
     implementation "com.github.komputing:khex:1.0.0-RC6"

@@ -1,23 +1,30 @@
 package com.tuliomagalhaes.walletconnectexample.ui
 
-sealed interface ViewState {
-    object InitialState : ViewState
+data class ViewState(
+    val walletAddress: String,
+    val walletPrivateKey: String,
+    val actionContent: ActionContent,
+)
+
+sealed interface ActionContent {
+    object Empty : ActionContent
+
+    data class Error(
+        val message: String,
+    ) : ActionContent
 
     data class ConnectionRequest(
         val dAppUrl: String,
-    ) : ViewState
+    ) : ActionContent
 
     data class EthereumSignIn(
         val id: Long,
         val dAppUrl: String,
         val signInMessage: String
-    ) : ViewState
+    ) : ActionContent
 }
 
 sealed interface Event {
-    data class PublicAddressChanged(
-        val value: String,
-    ) : Event
     data class PrivateKeyChanged(
         val value: String,
     ) : Event
