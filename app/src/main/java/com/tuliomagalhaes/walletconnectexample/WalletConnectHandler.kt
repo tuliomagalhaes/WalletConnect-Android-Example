@@ -9,6 +9,19 @@ import org.walletconnect.impls.OkHttpTransport
 import org.walletconnect.impls.WCSession
 import java.lang.IndexOutOfBoundsException
 
+typealias WalletConnectEventCallback = (WalletConnectEvent) -> Unit
+
+sealed interface WalletConnectEvent {
+    object UnhandledRequest : WalletConnectEvent
+
+    object ConnectionRequest : WalletConnectEvent
+
+    data class EthereumSignInRequest(
+        val id: Long,
+        val message: String,
+    ) : WalletConnectEvent
+}
+
 class WalletConnectHandler(
     private val moshi: Moshi,
     private val okHttpClient: OkHttpClient,
@@ -23,9 +36,11 @@ class WalletConnectHandler(
         }
 
         override fun onStatus(status: Session.Status) {
-            handleSessionStatus(status)
+            // no-op
         }
     }
+
+    var walletConnectEventCallback: WalletConnectEventCallback? = null
 
     fun startSession(uri: String) {
         val config = tryToLoadConfig(uri) ?: return
@@ -67,20 +82,58 @@ class WalletConnectHandler(
         }
     }
 
-    fun approveConnection() {
-        // TODO: get address from input field
-        currentSession?.approve(listOf(""), 1)
+    fun approveConnection(address: String) {
+        currentSession?.approve(listOf(address), 1)
     }
 
     fun rejectConnection() {
         currentSession?.reject()
     }
 
-    private fun handleSessionCall(call: Session.MethodCall) {
-        print(call)
+    fun approveRequest(
+        id: Long,
+        message: String,
+    ) {
+        currentSession?.approveRequest(
+            id = id,
+            response = message,
+        )
     }
 
-    private fun handleSessionStatus(status: Session.Status) {
-        print(status)
+    fun rejectRequest(id: Long) {
+        currentSession?.rejectRequest(
+            id = id,
+            errorCode = -1,
+            errorMsg = "Call Request Rejected",
+        )
+    }
+
+    private fun handleSessionCall(call: Session.MethodCall) {
+        when (call) {
+            is Session.MethodCall.SessionRequest -> {
+                walletConnectEventCallback?.invoke(WalletConnectEvent.ConnectionRequest)
+            }
+            is Session.MethodCall.SignMessage -> {
+                val event = WalletConnectEvent.EthereumSignInRequest(
+                    id = call.id,
+                    message = call.message,
+                )
+                walletConnectEventCallback?.invoke(event)
+            }
+            is Session.MethodCall.Custom -> {
+                if (call.method == "personal_sign" || call.method == "eth_sign") {
+                    val event = WalletConnectEvent.EthereumSignInRequest(
+                        id = call.id,
+                        message = call.params?.joinToString() ?: "",
+                    )
+                    walletConnectEventCallback?.invoke(event)
+                } else {
+                    walletConnectEventCallback?.invoke(WalletConnectEvent.UnhandledRequest)
+                }
+            }
+            is Session.MethodCall.SessionUpdate,
+            is Session.MethodCall.SendTransaction,
+            is Session.MethodCall.Response -> walletConnectEventCallback?.invoke(WalletConnectEvent.UnhandledRequest)
+        }
     }
 }
